@@ -55,7 +55,8 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
-#include <GL/glew.h>
+#include <EGL/egl.h>
+#include <GL/gl.h>
 
 #ifdef SUPERMODEL_WIN32
 #include "DirectInputSystem.h"
@@ -71,7 +72,7 @@
 #include "SDLIncludes.h"
 #include "Debugger/SupermodelDebugger.h"
 #include "Graphics/Legacy3D/Legacy3D.h"
-#include "Graphics/New3D/New3D.h"
+//#include "Graphics/New3D/New3D.h"
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
 #include "OSD/Audio.h"
@@ -233,12 +234,14 @@ static bool CreateGLScreen(const std::string &caption, bool focusWindow, unsigne
   SDL_GL_MakeCurrent(s_window, context);
 
   // Initialize GLEW, allowing us to use features beyond OpenGL 1.2
+  /*
   err = glewInit();
   if (GLEW_OK != err)
   {
     ErrorLog("OpenGL initialization failed: %s\n", glewGetErrorString(err));
     return FAIL;
   }
+  */
 
   return SetGLGeometry(xOffsetPtr, yOffsetPtr, xResPtr, yResPtr, totalXResPtr, totalYResPtr, keepAspectRatio);
 }
@@ -754,7 +757,7 @@ static void UpdateCrosshairs(uint32_t currentInputs, CInputs *Inputs, unsigned c
   glViewport(xOffset, yOffset, xRes, yRes);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluOrtho2D(0.0, 1.0, 1.0, 0.0);
+  glOrtho(0.0, 1.0, 1.0, 0.0, -1, 1);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
   glDisable(GL_TEXTURE_2D); // no texture mapping
@@ -945,7 +948,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 
   // Initialize the renderers
   CRender2D *Render2D = new CRender2D(s_runtime_config);
-  IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
+  IRender3D *Render3D = ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
   if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
     goto QuitError;
   if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
@@ -1091,7 +1094,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 
       // Recreate renderers and attach to the emulator
       Render2D = new CRender2D(s_runtime_config);
-      Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
+      Render3D = ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
       if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
         goto QuitError;
       if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
@@ -1439,7 +1442,7 @@ static Util::Config::Node DefaultConfig()
   // CDriveBoard
   config.Set("ForceFeedback", false);
   // Platform-specific/UI
-  config.Set("New3DEngine", true);
+  config.Set("New3DEngine", false);
   config.Set("QuadRendering", false);
   config.Set("XResolution", "496");
   config.Set("YResolution", "384");
