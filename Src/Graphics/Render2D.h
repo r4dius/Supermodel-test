@@ -28,7 +28,6 @@
 #ifndef INCLUDED_RENDER2D_H
 #define INCLUDED_RENDER2D_H
 
-#include <EGL/egl.h>
 #include <GL/gl.h>
 #include "Util/NewConfig.h"
 

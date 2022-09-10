@@ -24,7 +24,16 @@
 #
 # Makefile for UNIX/Linux systems.
 #
+#---------------------------------------------------------------------------------
+.SUFFIXES:
+#---------------------------------------------------------------------------------
 
+ifeq ($(strip $(DEVKITPRO)),)
+$(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>/devkitpro")
+endif
+
+TOPDIR ?= $(CURDIR)
+include $(DEVKITPRO)/libnx/switch_rules
 
 ###############################################################################
 # Build Options
@@ -47,10 +56,10 @@ include Makefiles/Options.inc
 #
 # Toolchain
 #
-CC = aarch64-none-elf-gcc.exe
+CC = aarch64-none-elf-gcc
 CCC = gcc.exe
-CXX = aarch64-none-elf-g++.exe
-LD = aarch64-none-elf-gcc.exe
+CXX = aarch64-none-elf-g++
+LD = aarch64-none-elf-gcc
 
 #
 # SDL
@@ -63,8 +72,8 @@ SDL2_LIBS = `sdl2-config --libs`
 #	UNIX-specific
 #
 
-PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -O3 -lEGL
-PLATFORM_LDFLAGS = $(SDL2_LIBS) -lnx -lEGL -lz -lm -lstdc++ -lSDL2_net -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -O3 -lGLESv2
+PLATFORM_LDFLAGS = $(SDL2_LIBS) -lnx -lz -lm -lstdc++ -lGLESv2 -lSDL2_net -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 LIBS	:= -lnx -lEGL
 

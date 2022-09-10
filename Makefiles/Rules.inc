@@ -78,7 +78,7 @@ CXXSTD = -std=c++17
 #
 # Construct the compiler (C and C++) and linker flags
 #
-COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGL_GLEXT_PROTOTYPES -DGLEW_NO_GLU $(SUPERMODEL_BUILD_FLAGS)
+COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I/opt/devkitpro/portlibs/switch/include -I,$(sort $(INCLUDE_DIRS))) -DGL_GLEXT_PROTOTYPES -DGLEW_NO_GLU $(SUPERMODEL_BUILD_FLAGS)
 CCOMMON_CFLAGS = -c $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -GL_GLEXT_PROTOTYPES -DGLEW_NO_GLU $(SUPERMODEL_BUILD_FLAGS)
 CFLAGS = $(COMMON_CFLAGS) $(CSTD)
 CCFLAGS = $(CCOMMON_CFLAGS) $(CSTD)

@@ -28,7 +28,6 @@
 #ifndef INCLUDED_SHADER_H
 #define INCLUDED_SHADER_H
 
-#include <EGL/egl.h>
 #include <GL/gl.h>
 #include <string>
 

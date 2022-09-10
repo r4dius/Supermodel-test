@@ -55,7 +55,6 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
-#include <EGL/egl.h>
 #include <GL/gl.h>
 
 #ifdef SUPERMODEL_WIN32

@@ -281,7 +281,7 @@
 #include "Shaders2D.h" // fragment and vertex shaders
 
 #include <cstring>
-#include <GLES/gl.h>
+#include <GL/gl.h>
 
 
 /******************************************************************************
