@@ -1,7 +1,7 @@
 #ifndef _R3DSHADER_H_
 #define _R3DSHADER_H_
 
-#include <GL/glew.h>
+#include <glad/glad.h>
 #include "Util/NewConfig.h"
 #include "Model.h"
 #include <map>

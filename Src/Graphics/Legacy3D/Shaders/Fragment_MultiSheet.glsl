@@ -26,214 +26,136 @@
  * different possible formats.
  */
 
-#version 120
-
+#version 320 es
 // Global uniforms
-uniform sampler2D	textureMap0;		// complete texture map (fmt 0), 2048x2048 texels
-uniform sampler2D	textureMap1;		// complete texture map (fmt 1), 2048x2048 texels
-uniform sampler2D	textureMap2;		// complete texture map (fmt 2), 2048x2048 texels
-uniform sampler2D	textureMap3;		// complete texture map (fmt 3), 2048x2048 texels
-uniform sampler2D	textureMap4;		// complete texture map (fmt 4), 2048x2048 texels
-uniform sampler2D	textureMap5;		// complete texture map (fmt 5), 2048x2048 texels
-uniform sampler2D	textureMap6;		// complete texture map (fmt 6), 2048x2048 texels
-uniform sampler2D	textureMap7;		// complete texture map (fmt 7), 2048x2048 texels
-uniform vec4		spotEllipse;		// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
-uniform vec2		spotRange;			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
-uniform vec3		spotColor;			// spotlight RGB color
-uniform vec3		lighting[2];		// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
-uniform float		mapSize;			// texture map size (2048,4096,6144 etc)
+uniform sampler2D textureMap[8];
+uniform vec4 spotEllipse;
+uniform vec2 spotRange;
+uniform vec3 spotColor;
+uniform vec3 lighting[2];
+uniform int mapSize;
 
-// Inputs from vertex shader 
-varying vec4		fsSubTexture;	// .x=texture X, .y=texture Y, .z=texture width, .w=texture height (all in texels)
-varying vec4		fsTexParams;	// .x=texture enable (if 1, else 0), .y=use transparency (if > 0), .z=U wrap mode (1=mirror, 0=repeat), .w=V wrap mode
-varying float		fsTexFormat;	// T1RGB5 contour texture (if > 0)
-varying float		fsTexMap;		// texture map number
-varying float		fsTransLevel;	// translucence level, 0.0 (transparent) to 1.0 (opaque)
-varying vec3		fsLightIntensity;	// lighting intensity 
-varying float		fsSpecularTerm;	// specular highlight
-varying float		fsFogFactor;	// fog factor
-varying float		fsViewZ;		// Z distance to fragment from viewpoint at origin
+// Inputs from vertex shader
+in vec4 fsSubTexture;
+in vec4 fsTexParams;
+in float fsTexFormat;
+in float fsTexMap;
+in float fsTransLevel;
+in vec3 fsLightIntensity;
+in float fsSpecularTerm;
+in float fsFogFactor;
+in float fsViewZ;
 
-/*
- * WrapTexelCoords():
- *
- * Computes the normalized OpenGL S,T coordinates within the 2048x2048 texture
- * sheet, taking into account wrapping behavior.
- *
- * Computing normalized OpenGL texture coordinates (0 to 1) within the 
- * Real3D texture sheet:
- *
- * If the texture is not mirrored, we simply have to clamp the
- * coordinates to fit within the texture dimensions, add the texture
- * X, Y position to select the appropriate one, and normalize by 2048
- * (the dimensions of the Real3D texture sheet).
- *
- *		= [(u,v)%(w,h)+(x,y)]/(2048,2048)
- *
- * If mirroring is enabled, textures are mirrored every odd multiple of
- * the original texture. To detect whether we are in an odd multiple, 
- * simply divide the coordinate by the texture dimension and check 
- * whether the result is odd. Then, clamp the coordinates as before but
- * subtract from the last texel to mirror them:
- *
- * 		= [M*((w-1,h-1)-(u,v)%(w,h)) + (1-M)*(u,v)%(w,h) + (x,y)]/(2048,2048)
- *		where M is 1.0 if the texture must be mirrored.
- *
- * As an optimization, this function computes TWO texture coordinates
- * simultaneously. The first is texCoord.xy, the second is in .zw. The other
- * parameters must have .xy = .zw.
- */
-vec4 WrapTexelCoords(vec4 texCoord, vec4 texOffset, vec4 texSize, vec4 mirrorEnable)
+void main()
 {
-	vec4	clampedCoord, mirror, glTexCoord;
-	
-	clampedCoord = mod(texCoord,texSize);						// clamp coordinates to within texture size
-	mirror = mirrorEnable * mod(floor(texCoord/texSize),2.0);	// whether this texel needs to be mirrored
+vec2 tc;
+vec4 texCol, texCol2, texCol3, texCol4, texCol5, texCol6, texCol7, texCol8;
+vec4 blendedTexCol, blendedTexCol2, blendedTexCol3, blendedTexCol4;
+vec4 blendedTexCol5, blendedTexCol6, blendedTexCol7, blendedTexCol8;
+vec4 finalCol, finalCol2, finalCol3, finalCol4, finalCol5, finalCol6, finalCol7, finalCol8;
+vec3 finalColor, color, lightIntensity;
+float fogFactor, depth, mirrorEnable, texWrapU, texWrapV;
 
-	glTexCoord = (	mirror*(texSize-clampedCoord) +
-					(vec4(1.0,1.0,1.0,1.0)-mirror)*clampedCoord +
-					texOffset
-				 ) / mapSize;
-	return glTexCoord;
+texWrapU = fsTexParams.z;
+texWrapV = fsTexParams.w;
+mirrorEnable = step(fsTexParams.x, 0.5);
+depth = (fsViewZ - spotRange.x) / (spotRange.y - spotRange.x);
+
+tc = fsSubTexture.xy / mapSize;
+tc.x = (tc.x - floor(tc.x)) * mapSize;
+tc.y = (tc.y - floor(tc.y)) * mapSize;
+
+if (texWrapU > 0.5)
+tc.x = mirrorEnable * (mapSize - tc.x) + (1.0 - mirrorEnable) * tc.x;
+
+if (texWrapV > 0.5)
+tc.y = mirrorEnable * (mapSize - tc.y) + (1.0 - mirrorEnable) * tc.y;
+
+texCol = texture(textureMap[int(fsTexMap)], tc);
+
+if (fsTexFormat > 0.5) {
+if (texCol.a < 0.1)
+discard;
+texCol.rgb = vec3(1.0) - texCol.rgb;
 }
 
-/*
- * main():
- *
- * Fragment shader entry point.
- */
+if (fsTransLevel < 0.5)
+fsTransLevel = 1.0;
 
-void main(void)
-{	
-	vec4	uv_top, uv_bot, c[4];
-	vec2	r;
-	vec4	fragColor;
-	vec2	ellipse;
-	vec3	lightIntensity;
-	float	insideSpot;
-	int		x;
-	
-	// Get polygon color for untextured polygons (textured polygons will overwrite)
-	if (fsTexParams.x < 0.5)
-		fragColor = gl_Color;		
-	else
-	// Textured polygons: set fragment color to texel value
-	{			
-		/*
-		 * Bilinear Filtering
-		 *
-		 * In order to get this working on ATI, the number of operations is
-		 * reduced by putting everything into vec4s. uv_top holds the UV 
-		 * coordinates for the top two texels (.xy=left, .zw=right) and uv_bot
-		 * is for the lower two.
-		 */
+blendedTexCol = vec4(vec3(texCol.r * texCol.a), texCol.a) * fsTransLevel;
 
-		// Compute fractional blending factor, r, and lower left corner of texel 0
-		uv_bot.xy = gl_TexCoord[0].st-vec2(0.5,0.5);	// move into the lower left blending texel 
-		r = uv_bot.xy-floor(uv_bot.xy);					// fractional part
-		uv_bot.xy = floor(uv_bot.xy);					// integral part
-		
-		// Compute texel coordinates
-		uv_bot.xy += vec2(0.5,0.5);	// offset to center of pixel (should not be needed but it fixes a lot of glitches, esp. on Nvidia)
-		uv_bot.zw = uv_bot.xy + vec2(1.0,0.0);			// compute coordinates of the other three neighbors
-		uv_top = uv_bot + vec4(0.0,1.0,0.0,1.0);
+if (fsTexMap == 0.0) {
+finalCol = blendedTexCol;
+}
+else {
+finalCol = texture(textureMap[int(fsTexMap) - 1.0], tc);
+finalCol = vec4(vec3(finalCol.r * finalCol.a), finalCol.a) * (1.0 - fsTransLevel);
+}
 
-		// Compute the properly wrapped texel coordinates
-		uv_top = WrapTexelCoords(uv_top,vec4(fsSubTexture.xy,fsSubTexture.xy),vec4(fsSubTexture.zw,fsSubTexture.zw), vec4(fsTexParams.zw,fsTexParams.zw));
-		uv_bot = WrapTexelCoords(uv_bot,vec4(fsSubTexture.xy,fsSubTexture.xy),vec4(fsSubTexture.zw,fsSubTexture.zw), vec4(fsTexParams.zw,fsTexParams.zw));
+if (fsTexMap == 1.0) {
+finalCol2 = blendedTexCol;
+}
+else {
+finalCol2 = texture(textureMap[int(fsTexMap) - 1.0], tc);
+finalCol2 = vec4(vec3(finalCol2.r * finalCol2.a), finalCol2.a) * (1.0 - fsTransLevel);
+}
 
-		// Fetch the texels from the given texture map
-		if (fsTexMap < 0.5f)	{
-			c[0]=texture2D(textureMap0, uv_bot.xy);       // bottom-left (base texel)
-			c[1]=texture2D(textureMap0, uv_bot.zw);       // bottom-right
-			c[2]=texture2D(textureMap0, uv_top.xy);       // top-left
-			c[3]=texture2D(textureMap0, uv_top.zw);       // top-right
-		} else if (fsTexMap < 1.5f) {
-            c[0]=texture2D(textureMap1, uv_bot.xy);       // bottom-left (base texel)
-			c[1]=texture2D(textureMap1, uv_bot.zw);       // bottom-right
-			c[2]=texture2D(textureMap1, uv_top.xy);       // top-left
-			c[3]=texture2D(textureMap1, uv_top.zw);       // top-right
-		} else if (fsTexMap < 2.5f) {
-            c[0]=texture2D(textureMap2, uv_bot.xy);       // bottom-left (base texel)
-			c[1]=texture2D(textureMap2, uv_bot.zw);       // bottom-right
-			c[2]=texture2D(textureMap2, uv_top.xy);       // top-left
-			c[3]=texture2D(textureMap2, uv_top.zw);       // top-right
-		} else if (fsTexMap < 3.5f) {
-            c[0]=texture2D(textureMap3, uv_bot.xy);       // bottom-left (base texel)
-			c[1]=texture2D(textureMap3, uv_bot.zw);       // bottom-right
-			c[2]=texture2D(textureMap3, uv_top.xy);       // top-left
-			c[3]=texture2D(textureMap3, uv_top.zw);       // top-right
-		} else if (fsTexMap < 4.5f) {
-            c[0]=texture2D(textureMap4, uv_bot.xy);       // bottom-left (base texel)
-			c[1]=texture2D(textureMap4, uv_bot.zw);       // bottom-right
-			c[2]=texture2D(textureMap4, uv_top.xy);       // top-left
-			c[3]=texture2D(textureMap4, uv_top.zw);       // top-right
-		} else if (fsTexMap < 5.5f) {
-            c[0]=texture2D(textureMap5, uv_bot.xy);       // bottom-left (base texel)
-			c[1]=texture2D(textureMap5, uv_bot.zw);       // bottom-right
-			c[2]=texture2D(textureMap5, uv_top.xy);       // top-left
-			c[3]=texture2D(textureMap5, uv_top.zw);       // top-right
-		} else if (fsTexMap < 6.5f) {
-			c[0]=texture2D(textureMap6, uv_bot.xy);       // bottom-left (base texel)
-			c[1]=texture2D(textureMap6, uv_bot.zw);       // bottom-right
-			c[2]=texture2D(textureMap6, uv_top.xy);       // top-left
-			c[3]=texture2D(textureMap6, uv_top.zw);       // top-right
-		} else {
-            c[0]=texture2D(textureMap7, uv_bot.xy);       // bottom-left (base texel)
-			c[1]=texture2D(textureMap7, uv_bot.zw);       // bottom-right
-			c[2]=texture2D(textureMap7, uv_top.xy);       // top-left
-			c[3]=texture2D(textureMap7, uv_top.zw);       // top-right
-		}                      
+if (fsTexMap == 2.0) {
+finalCol3 = blendedTexCol;
+}
+else {
+finalCol3 = texture(textureMap[int(fsTexMap) - 1.0], tc);
+finalCol3 = vec4(vec3(finalCol3.r * finalCol3.a), finalCol3.a) * (1.0 - fsTransLevel);
+}
 
-		// Interpolate texels and blend result with material color to determine final (unlit) fragment color
-		// fragColor = (c[0]*(1.0-r.s)*(1.0-r.t) + c[1]*r.s*(1.0-r.t) + c[2]*(1.0-r.s)*r.t + c[3]*r.s*r.t);
-		// Faster method:
-		c[0] += (c[1]-c[0])*r.s;			// 2 alu
-		c[2] += (c[3]-c[2])*r.s;			// 2 alu
-		fragColor = c[0]+(c[2]-c[0])*r.t;	// 2 alu
-	
-		/*
-		 * T1RGB5:
-		 *
-		 * The transparency bit determines whether to discard pixels (if set).
-		 * What is unknown is how this bit behaves when interpolated. OpenGL
-		 * processes it as an alpha value, so it might concievably be blended
-		 * with neighbors. Here, an arbitrary threshold is chosen.
-		 *
-		 * To-do: blending could probably enabled and this would work even
-		 * better with a hard threshold.
-		 *
-		 * Countour processing also seems to be enabled for RGBA4 textures.
-		 * When the alpha value is 0.0 (or close), pixels are discarded 
-		 * entirely.
-		 */
-		if (fsTexParams.y > 0.5)	// contour processing enabled
-		{
-			if (fragColor.a < 0.01)	// discard anything with alpha == 0
-				discard;
-		}
-		
-		// If contour texture and not discarded, force alpha to 1.0 because will later be modified by polygon translucency
-		if (fsTexFormat < 0.5)		// contour (T1RGB5) texture map
-			fragColor.a = 1.0;
-	}
+if (fsTexMap == 3.0) {
+finalCol4 = blendedTexCol;
+}
+else {
+finalCol4 = texture(textureMap[int(fsTexMap) - 1.0], tc);
+finalCol4 = vec4(vec3(finalCol4.r * finalCol4.a), finalCol4.a) * (1.0 - fsTransLevel);
+}
 
-	// Compute spotlight and apply lighting
-	ellipse = (gl_FragCoord.xy-spotEllipse.xy)/spotEllipse.zw;
-	insideSpot = dot(ellipse,ellipse);
-	if ((insideSpot <= 1.0) &&  (fsViewZ>=spotRange.x) && (fsViewZ<spotRange.y))
-		lightIntensity = fsLightIntensity+(1.0-insideSpot)*spotColor;
-	else
-		lightIntensity = fsLightIntensity;
-	fragColor.rgb *= lightIntensity;
-	fragColor.rgb += vec3(fsSpecularTerm,fsSpecularTerm,fsSpecularTerm);
-	
-	// Translucency (modulates existing alpha channel for RGBA4 texels)
-	fragColor.a *= fsTransLevel;
+if (fsTexMap == 4.0) {
+finalCol5 = blendedTexCol;
+}
+else {
+finalCol5 = texture(textureMap[int(fsTexMap) - 1.0], tc);
+finalCol5 = vec4(vec3(finalCol5.r * finalCol5.a), finalCol5.a) * (1.0 - fsTransLevel);
+}
 
-	// Apply fog
-	fragColor.rgb = mix(fragColor.rgb, gl_Fog.color.rgb, fsFogFactor);
+if (fsTexMap == 5.0) {
+finalCol6 = blendedTexCol;
+}
+else {
+finalCol6 = texture(textureMap[int(fsTexMap) - 1.0], tc);
+finalCol6 = vec4(vec3(finalCol6.r * finalCol6.a), finalCol6.a) * (1.0 - fsTransLevel);
+}
 
-	// Store final color
-	gl_FragColor = fragColor;
+if (fsTexMap == 6.0) {
+finalCol7 = blendedTexCol;
+}
+else {
+finalCol7 = texture(textureMap[int(fsTexMap) - 1.0], tc);
+finalCol7 = vec4(vec3(finalCol7.r * finalCol7.a), finalCol7.a) * (1.0 - fsTransLevel);
+}
+
+if (fsTexMap == 7.0) {
+finalCol8 = blendedTexCol;
+}
+else {
+finalCol8 = texture(textureMap[int(fsTexMap) - 1.0], tc);
+finalCol8 = vec4(vec3(finalCol8.r * finalCol8.a), finalCol8.a) * (1.0 - fsTransLevel);
+}
+
+finalColor = finalCol.rgb + finalCol2.rgb + finalCol3.rgb + finalCol4.rgb + finalCol5.rgb + finalCol6.rgb + finalCol7.rgb + finalCol8.rgb;
+
+if (fsSpecularTerm > 0.0)
+finalColor = finalColor * pow(max(dot(fsLightIntensity, lightIntensity), 0.0), fsSpecularTerm);
+
+color = vec3(lighting[0].xy) * finalColor + lighting[1].xyz;
+
+fogFactor = (exp(-depth * depth) + 1.0) * 0.5;
+
+gl_FragColor = vec4(color * (1.0 - fogFactor) + fogColor.rgb * fogFactor, 1.0);
 }

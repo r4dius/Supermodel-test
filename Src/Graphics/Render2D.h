@@ -28,7 +28,7 @@
 #ifndef INCLUDED_RENDER2D_H
 #define INCLUDED_RENDER2D_H
 
-#include <GL/glew.h>
+#include <glad/glad.h>
 #include "Util/NewConfig.h"
 #include "New3D/GLSLShader.h"
 #include "FBO.h"

@@ -292,7 +292,7 @@
 #include "Shaders2D.h" // fragment and vertex shaders
 
 #include <cstring>
-#include <GL/glew.h>
+#include <glad/glad.h>
 
 
 /******************************************************************************

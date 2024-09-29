@@ -31,7 +31,8 @@
 
 #include "TextureRefs.h"
 #include "Graphics/IRender3D.h"
-#include <GL/glew.h>
+#include <glad/glad.h>
+#include <GL/glext.h>
 #include "Util/NewConfig.h"
 #include "Types.h"
 

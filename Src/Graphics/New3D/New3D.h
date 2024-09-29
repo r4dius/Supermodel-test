@@ -29,7 +29,7 @@
 #ifndef INCLUDED_NEW3D_H
 #define INCLUDED_NEW3D_H
 
-#include <GL/glew.h>
+#include <glad/glad.h>
 #include "Types.h"
 #include "Graphics/IRender3D.h"
 #include "Model.h"

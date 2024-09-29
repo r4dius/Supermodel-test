@@ -24,8 +24,6 @@
 #include <set>
 #ifdef _WIN32
 #include <windows.h>
-#else
-#include <syslog.h>
 #endif
 
 
@@ -353,7 +351,7 @@ void CSystemLogger::DebugLog(const char *fmt, va_list vl)
 #ifdef _WIN32
   OutputDebugString(string2);
 #else
-  syslog(LOG_DEBUG, string2);
+  //syslog(LOG_DEBUG, string2);
 #endif
 }
 
@@ -373,7 +371,7 @@ void CSystemLogger::InfoLog(const char *fmt, va_list vl)
 #ifdef _WIN32
   OutputDebugString(string2);
 #else
-  syslog(LOG_INFO, string2);
+  //syslog(LOG_INFO, string2);
 #endif
 }
 
@@ -393,7 +391,7 @@ void CSystemLogger::ErrorLog(const char *fmt, va_list vl)
  #ifdef _WIN32
   OutputDebugString(string2);
 #else
-  syslog(LOG_ERR, string2);
+  //syslog(LOG_ERR, string2);
 #endif
 }
 

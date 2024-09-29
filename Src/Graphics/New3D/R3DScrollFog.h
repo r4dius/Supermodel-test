@@ -2,7 +2,7 @@
 #define _R3DSCROLLFOG_H_
 
 #include "Util/NewConfig.h"
-#include <GL/glew.h>
+#include <glad/glad.h>
 
 namespace New3D {
 

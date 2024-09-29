@@ -44,7 +44,7 @@
 
 #include <new>
 #include <cstdio>
-#include <GL/glew.h>
+#include <glad/glad.h>
 #include "Supermodel.h"
 
 

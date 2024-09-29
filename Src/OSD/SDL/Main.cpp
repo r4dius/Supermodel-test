@@ -72,7 +72,7 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
-#include <GL/glew.h>
+#include <glad/glad.h>
 
 #ifdef SUPERMODEL_WIN32
 #include "DirectInputSystem.h"
@@ -316,12 +316,15 @@ static bool CreateGLScreen(bool coreContext, bool quadRendering, const std::stri
   SDL_GL_MakeCurrent(s_window, context);
 
   // Initialize GLEW, allowing us to use features beyond OpenGL 1.2
-  err = glewInit();
+  /*err = glewInit();
   if (GLEW_OK != err)
   {
     ErrorLog("OpenGL initialization failed: %s\n", glewGetErrorString(err));
     return FAIL;
   }
+  */
+  
+  err = gladLoadGL();
 
   // print some basic GPU info
   GLint profile = 0;
@@ -534,9 +537,10 @@ static void SaveFrameBuffer(const std::string& file)
 void Screenshot()
 {
     // Make a screenshot
+
     time_t now = std::time(nullptr);
     tm* ltm = std::localtime(&now);
-    std::string file = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Screenshots)
+    std::string file = Util::Format() << "screenshots/"
         << "Screenshot_"
         << std::setfill('0') << std::setw(4) << (1900 + ltm->tm_year)
         << '-'
@@ -689,7 +693,7 @@ static void SaveState(IEmulator *Model3)
 {
   CBlockFile  SaveState;
 
-  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Model3->GetGame().name << ".st" << s_saveSlot;
+  std::string file_path = Util::Format() << "Saves/" << Model3->GetGame().name << ".st" << s_saveSlot;
   if (OKAY != SaveState.Create(file_path, "Supermodel Save State", "Supermodel Version " SUPERMODEL_VERSION))
   {
     ErrorLog("Unable to save state to '%s'.", file_path.c_str());
@@ -714,7 +718,7 @@ static void LoadState(IEmulator *Model3, std::string file_path = std::string())
 
   // Generate file path
   if (file_path.empty())
-    file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Model3->GetGame().name << ".st" << s_saveSlot;
+    file_path = Util::Format() << "Saves/" << Model3->GetGame().name << ".st" << s_saveSlot;
 
   // Open and check to make sure format is correct
   if (OKAY != SaveState.Load(file_path))
@@ -748,7 +752,7 @@ static void SaveNVRAM(IEmulator *Model3)
 {
   CBlockFile  NVRAM;
 
-  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Model3->GetGame().name << ".nv";
+  std::string file_path = Util::Format() << "NVRAM/" << Model3->GetGame().name << ".nv";
   if (OKAY != NVRAM.Create(file_path, "Supermodel NVRAM State", "Supermodel Version " SUPERMODEL_VERSION))
   {
     ErrorLog("Unable to save NVRAM to '%s'. Make sure directory exists!", file_path.c_str());
@@ -771,7 +775,7 @@ static void LoadNVRAM(IEmulator *Model3)
   CBlockFile  NVRAM;
 
   // Generate file path
-  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Model3->GetGame().name << ".nv";
+  std::string file_path = Util::Format() << "NVRAM/" << Model3->GetGame().name << ".nv";
 
   // Open and check to make sure format is correct
   if (OKAY != NVRAM.Load(file_path))
@@ -1357,10 +1361,10 @@ QuitError:
  Entry Point and Command Line Procesing
 ******************************************************************************/
 
-static const std::string s_analysisPath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Analysis);
-static const std::string s_configFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Supermodel.ini";
-static const std::string s_gameXMLFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Games.xml";
-static const std::string s_logFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Log) << "Supermodel.log";
+static const std::string s_analysisPath = Util::Format() << "config/";
+static const std::string s_configFilePath = Util::Format() << "config/" << "Supermodel.ini";
+static const std::string s_gameXMLFilePath = Util::Format() << "config/" << "Games.xml";
+static const std::string s_logFilePath = Util::Format() << "log/" << "Supermodel-new.log";
 
 // Create and configure inputs
 static bool ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, Util::Config::Node *runtimeConfig, const Game &game, bool configure)
@@ -1520,7 +1524,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("SDLConstForceThreshold", "30");
 #ifdef NET_BOARD
   // NetBoard
-  config.Set("Network", false);
+  config.Set("Network", true);
   config.Set("SimulateNet", true);
   config.Set("PortIn", unsigned(1970));
   config.Set("PortOut", unsigned(1971));
@@ -1661,7 +1665,7 @@ struct ParsedCommandLine
   {
     // Logging is special: it is only parsed from the command line and
     // therefore, defaults are needed early
-    config.Set("LogOutput", s_logFilePath.c_str());
+    config.Set("LogOutput", "Supermodel-new.log");
     config.Set("LogLevel", "info");
   }
 };
@@ -1901,11 +1905,13 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
 int main(int argc, char **argv)
 {
   Title();
+  /* 
   if (argc <= 1)
   {
     Help();
     return 0;
   }
+  */
 
   // Before command line is parsed, console logging only
   SetLogger(std::make_shared<CConsoleErrorLogger>());
@@ -1946,7 +1952,7 @@ int main(int argc, char **argv)
   s_gfxStatePath.assign(cmd_line.gfx_state);
 #endif
   bool print_games = cmd_line.print_games;
-  bool rom_specified = !cmd_line.rom_files.empty();
+  bool rom_specified = "scud.zip";
   if (!rom_specified && !print_games && !cmd_line.config_inputs && !cmd_line.print_inputs)
   {
     ErrorLog("No ROM file specified.");
@@ -1973,7 +1979,7 @@ int main(int argc, char **argv)
         PrintGameList(xml_file, loader.GetGames());
         return 0;
       }
-      if (loader.Load(&game, &rom_set, *cmd_line.rom_files.begin()))
+      if (loader.Load(&game, &rom_set, "scud.zip"))
         return 1;
       Util::Config::MergeINISections(&config4, config3, fileConfig[game.name]);   // apply game-specific config
     }
@@ -2004,8 +2010,8 @@ int main(int argc, char **argv)
   aaValue = s_runtime_config["Supersampling"].ValueAs<int>();
 
   // Create a window
-  xRes = 496;
-  yRes = 384;
+  xRes = 1280;
+  yRes = 720;
   if (OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), s_runtime_config["QuadRendering"].ValueAs<bool>(),"Supermodel", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
   {
     exitCode = 1;

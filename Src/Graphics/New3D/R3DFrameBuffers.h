@@ -1,7 +1,7 @@
 #ifndef FBO_H
 #define FBO_H
 
-#include <GL/glew.h>
+#include <glad/glad.h>
 #include "VBO.h"
 #include "GLSLShader.h"
 #include "Model.h"

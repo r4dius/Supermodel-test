@@ -29,114 +29,60 @@
  * starting Supermodel.
  */
 
-#version 120
+#version 320 es
 
 // Global uniforms
-uniform sampler2D	textureMap;		// complete texture map, 2048x2048 texels
-uniform vec4	spotEllipse;		// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
-uniform vec2	spotRange;			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
-uniform vec3	spotColor;			// spotlight RGB color
-uniform float		mapSize;		// texture map size (2048,4096,6144 etc)
+uniform sampler2D textureMap;
+uniform vec4 spotEllipse;
+uniform vec2 spotRange;
+uniform vec3 spotColor;
+uniform float mapSize;
 
-// Inputs from vertex shader 
-varying vec4		fsSubTexture;	// .x=texture X, .y=texture Y, .z=texture width, .w=texture height (all in texels)
-varying vec4		fsTexParams;	// .x=texture enable (if 1, else 0), .y=use transparency (if > 0), .z=U wrap mode (1=mirror, 0=repeat), .w=V wrap mode
-varying float		fsTexFormat;	// .x=T1RGB5 contour texture (if > 0)
-varying float		fsTransLevel;	// translucence level, 0.0 (transparent) to 1.0 (opaque)
-varying vec3		fsLightIntensity;	// lighting intensity 
-varying float		fsFogFactor;		// fog factor
-varying float		fsViewZ;		// Z distance to fragment from viewpoint at origin
+// Inputs from vertex shader
+in vec4 fsSubTexture;
+in vec4 fsTexParams;
+in float fsTexFormat;
+in float fsTransLevel;
+in vec3 fsLightIntensity;
+in float fsFogFactor;
+in float fsViewZ;
 
-/*
- * WrapTexelCoords():
- *
- * Computes the normalized OpenGL S,T coordinates within the 2048x2048 texture
- * sheet, taking into account wrapping behavior.
- *
- * Computing normalized OpenGL texture coordinates (0 to 1) within the 
- * Real3D texture sheet:
- *
- * If the texture is not mirrored, we simply have to clamp the
- * coordinates to fit within the texture dimensions, add the texture
- * X, Y position to select the appropriate one, and normalize by 2048
- * (the dimensions of the Real3D texture sheet).
- *
- *		= [(u,v)%(w,h)+(x,y)]/(2048,2048)
- *
- * If mirroring is enabled, textures are mirrored every odd multiple of
- * the original texture. To detect whether we are in an odd multiple, 
- * simply divide the coordinate by the texture dimension and check 
- * whether the result is odd. Then, clamp the coordinates as before but
- * subtract from the last texel to mirror them:
- *
- * 		= [M*((w-1,h-1)-(u,v)%(w,h)) + (1-M)*(u,v)%(w,h) + (x,y)]/(2048,2048)
- *		where M is 1.0 if the texture must be mirrored.
- *
- * As an optimization, this function computes TWO texture coordinates
- * simultaneously. The first is texCoord.xy, the second is in .zw. The other
- * parameters must have .xy = .zw.
- */
+// Helper function for texture coordinate wrapping
 vec4 WrapTexelCoords(vec4 texCoord, vec4 texOffset, vec4 texSize, vec4 mirrorEnable)
 {
-	vec4	clampedCoord, mirror, glTexCoord;
-	
-	clampedCoord = mod(texCoord,texSize);						// clamp coordinates to within texture size
-	mirror = mirrorEnable * mod(floor(texCoord/texSize),2.0);	// whether this texel needs to be mirrored
+    vec4 clampedCoord = mod(texCoord, texSize);
+    vec4 mirror = mirrorEnable * mod(floor(texCoord / texSize), 2.0);
 
-	glTexCoord = (	mirror*(texSize-clampedCoord) +
-					(vec4(1.0,1.0,1.0,1.0)-mirror)*clampedCoord +
-					texOffset
-				 ) / mapSize;
-/*
-	glTexCoord = (	mirror*(texSize-vec4(1.0,1.0,1.0,1.0)-clampedCoord) +
-					(vec4(1.0,1.0,1.0,1.0)-mirror)*clampedCoord +
-					texOffset
-				 ) / mapSize;
-*/
-	return glTexCoord;
+    return (mirror * (texSize - clampedCoord) + (vec4(1.0, 1.0, 1.0, 1.0) - mirror) * clampedCoord + texOffset) / mapSize;
 }
 
-/*
- * main():
- *
- * Fragment shader entry point.
- */
+void main()
+{
+    vec4 uv_top, uv_bot;
+    vec2 r;
+    vec4 fragColor;
+    vec2 ellipse;
+    vec3 lightIntensity;
+    float insideSpot;
 
-void main(void)
-{	
-	vec4	uv_top, uv_bot, c[4];
-	vec2	r;
-	vec4	fragColor;
-	vec2	ellipse;
-	vec3	lightIntensity;
-	float	insideSpot;
-	
-	// Get polygon color for untextured polygons (textured polygons will overwrite)
-	if (fsTexParams.x < 0.5)
-		fragColor = gl_Color;
-	else
-	// Textured polygons: set fragment color to texel value
-	{			
-		fragColor = texture2D(textureMap,(fsSubTexture.xy+fsSubTexture.zw/2.0)/mapSize);
-		//fragColor += texture2D(textureMap,(fsSubTexture.xy+fsSubTexture.zw)/mapSize);
-	
-	}
+    if (fsTexParams.x < 0.5)
+        fragColor = gl_FragColor;
+    else
+    {
+        fragColor = texture(textureMap, (fsSubTexture.xy + fsSubTexture.zw / 2.0) / mapSize);
+    }
 
-	// Compute spotlight and apply lighting
-	ellipse = (gl_FragCoord.xy-spotEllipse.xy)/spotEllipse.zw;
-	insideSpot = dot(ellipse,ellipse);
-	if ((insideSpot <= 1.0) &&  (fsViewZ>=spotRange.x) && (fsViewZ<spotRange.y))
-		lightIntensity = fsLightIntensity+(1.0-insideSpot)*spotColor;
-	else
-		lightIntensity = fsLightIntensity;
-	fragColor.rgb *= lightIntensity;
-		
-	// Translucency (modulates existing alpha channel for RGBA4 texels)
-	fragColor.a *= fsTransLevel;
+    ellipse = (gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw;
+    insideSpot = dot(ellipse, ellipse);
+    if ((insideSpot <= 1.0) && (fsViewZ >= spotRange.x) && (fsViewZ < spotRange.y))
+        lightIntensity = fsLightIntensity + (1.0 - insideSpot) * spotColor;
+    else
+        lightIntensity = fsLightIntensity;
 
-	// Apply fog under the control of fog factor setting from polygon header
-	fragColor.rgb = mix(gl_Fog.color.rgb, fragColor.rgb, fsFogFactor );
+    fragColor.rgb *= lightIntensity;
+    fragColor.a *= fsTransLevel;
 
-	// Store final color
-	gl_FragColor = fragColor;
+    fragColor.rgb = mix(gl_Fog.color.rgb, fragColor.rgb, fsFogFactor);
+
+    gl_FragColor = fragColor;
 }

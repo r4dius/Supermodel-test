@@ -68,7 +68,7 @@ endif
 #
 # Compiler options
 #
-ARCH =
+ARCH = -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 OPT = -O3
 WARN = -Wall
 CSTD = -std=iso9899:2011
@@ -78,10 +78,10 @@ CXXSTD = -std=c++17
 #
 # Construct the compiler (C and C++) and linker flags
 #
-COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC $(SUPERMODEL_BUILD_FLAGS)
-CFLAGS = $(COMMON_CFLAGS) $(CSTD)
+COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I/opt/devkitpro/portlibs/switch/include -I,$(sort $(INCLUDE_DIRS))) -DGLEW_EGL -DGLU -DGLEW_STATIC -DIOAPI_NO_64 $(SUPERMODEL_BUILD_FLAGS)
+CFLAGS = $(COMMON_CFLAGS) $(CSTD) -D__SWITCH__
 CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
-LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) -s
+LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) -s -DGLU
 
 
 ###############################################################################
@@ -97,7 +97,7 @@ SRC_FILES = \
 	Src/Util/BitRegister.cpp \
 	Src/JTAG.cpp \
 	Src/Graphics/Legacy3D/Error.cpp \
-	Src/Pkgs/glew.cpp \
+	Src/Pkgs/glad.cpp \
 	Src/Graphics/Shader.cpp \
 	Src/Model3/Real3D.cpp \
 	Src/Graphics/Legacy3D/Legacy3D.cpp \
@@ -297,7 +297,7 @@ $(OBJ_DIR)/%.o:	%.c
 # The .exe suffix is absolutely required for native Windows non-MSYS builds!
 #
 
-MUSASHI_OUTFILE = $(OBJ_DIR)/m68kmake.exe # do not remove the .exe suffix!
+MUSASHI_OUTFILE = ./m68kmake.exe # do not remove the .exe suffix!
 MUSASHI_CFLAGS = -ISrc/CPU/68K/Musashi -I$(OBJ_DIR) -DINLINE="static inline" -Wno-unused-variable
 MUSASHI_LDFLAGS = -o $(MUSASHI_OUTFILE) $(OBJ_DIR)/m68kmake.o -s
 

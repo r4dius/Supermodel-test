@@ -24,15 +24,15 @@
 #include "Graphics/New3D/New3D.h"
 #include "OSD/FileSystemPath.h"
 #include "SDLIncludes.h"
-#include <GL/glew.h>
+#include <glad/glad.h>
 #include <vector>
 #include "Inputs/Inputs.h"
 #include "Util/Format.h"
 
 bool CCrosshair::Init()
 {
-  const std::string p1CrosshairFile = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Assets) << "p1crosshair.bmp";
-  const std::string p2CrosshairFile = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Assets) << "p2crosshair.bmp";
+  const std::string p1CrosshairFile = Util::Format() << "Assets/" << "p1crosshair.bmp";
+  const std::string p2CrosshairFile = Util::Format() << "Assets/" << "p2crosshair.bmp";
 
   m_crosshairStyle = Util::ToLower(m_config["CrosshairStyle"].ValueAs<std::string>());
   if (m_crosshairStyle == "bmp")

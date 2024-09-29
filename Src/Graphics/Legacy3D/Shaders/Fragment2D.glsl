@@ -25,18 +25,11 @@
  * Fragment shader for 2D tilemap rendering.
  */
 
-#version 120
-
+#version 320 es
 // Global uniforms
-uniform sampler2D	textureMap;		// 512x512 layer surface
+uniform sampler2D textureMap;
 
-/*
- * main():
- *
- * Fragment shader entry point.
- */
-
-void main(void)
-{	
-	gl_FragColor = texture2D(textureMap, gl_TexCoord[0].st);
+void main()
+{
+    gl_FragColor = texture(textureMap, gl_TexCoord[0].st);
 }
