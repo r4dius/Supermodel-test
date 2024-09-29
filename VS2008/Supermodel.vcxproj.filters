@@ -257,6 +257,9 @@
     <ClCompile Include="..\Src\OSD\Windows\WinOutputs.cpp">
       <Filter>Source Files\OSD\Windows</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\OSD\Windows\FileSystemPath.cpp">
+      <Filter>Source Files\OSD\Windows</Filter>
+    </ClCompile>
     <ClCompile Include="..\Src\Pkgs\glew.c">
       <Filter>Source Files\Pkgs</Filter>
     </ClCompile>
@@ -377,12 +380,6 @@
     <ClCompile Include="..\Src\Graphics\New3D\R3DShader.cpp">
       <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\Texture.cpp">
-      <Filter>Source Files\Graphics\New</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\TextureSheet.cpp">
-      <Filter>Source Files\Graphics\New</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Graphics\New3D\VBO.cpp">
       <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
@@ -466,6 +463,18 @@
     </ClCompile>
     <ClCompile Include="..\Src\Network\SimNetBoard.cpp">
       <Filter>Source Files\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\OSD\SDL\Crosshair.cpp">
+      <Filter>Source Files\OSD\SDL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\FBO.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\SuperAA.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\TextureBank.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -835,16 +844,28 @@
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderTriangles.h">
       <Filter>Header Files\Graphics\New</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\Texture.h">
-      <Filter>Header Files\Graphics\New</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\TextureSheet.h">
-      <Filter>Header Files\Graphics\New</Filter>
-    </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\VBO.h">
       <Filter>Header Files\Graphics\New</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\Vec.h">
+      <Filter>Header Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Util\BitCast.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\SDL\Crosshair.h">
+      <Filter>Header Files\OSD\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\FBO.h">
+      <Filter>Header Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\R3DShaderCommon.h">
+      <Filter>Header Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\SuperAA.h">
+      <Filter>Header Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\TextureBank.h">
       <Filter>Header Files\Graphics\New</Filter>
     </ClInclude>
   </ItemGroup>

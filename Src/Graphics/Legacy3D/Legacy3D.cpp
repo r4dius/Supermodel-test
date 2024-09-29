@@ -161,22 +161,17 @@
 #include "Supermodel.h"
 #include "Shaders3D.h"  // fragment and vertex shaders
 #include "Graphics/Shader.h"
+#include "Util/BitCast.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 
-namespace Legacy3D {
-
-// Microsoft doesn't provide isnan() and isinf()
-#ifdef _MSC_VER
-  #include <float.h>
-  #define ISNAN(x)  (_isnan(x))
-  #define ISINF(x)  (!_finite(x))
-#else
-  #define ISNAN(x)  (std::isnan(x))
-  #define ISINF(x)  (std::isinf(x))
+#ifndef M_PI
+#define M_PI 3.1415926535897932384626433832795
 #endif
+
+namespace Legacy3D {
 
 /******************************************************************************
  Definitions and Constants
@@ -198,18 +193,6 @@ namespace Legacy3D {
 /******************************************************************************
  Texture Management 
 ******************************************************************************/
-
-void gluPerspective( GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar )
-{
-    const GLdouble pi = 3.1415926535897932384626433832795;
-    GLdouble fW, fH;
-
-    //fH = tan( (fovY / 2) / 180 * pi ) * zNear;
-    fH = tan( fovY / 360 * pi ) * zNear;
-    fW = fH * aspect;
-
-    glFrustum( -fW, fW, -fH, fH, zNear, zFar );
-}
 
 // Default mapping from Model3 texture format to texture sheet.
 // Currently this is just a simple 1-to-1 mapping but if/when more formats get
@@ -695,9 +678,9 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
   const UINT32 node1Ptr     = node[0x07-offset];
   const UINT32 node2Ptr     = node[0x08-offset];
   const UINT32 matrixOffset = node[0x03-offset]&0xFFF;
-  const float x             = *(float *) &node[0x04-offset];
-  const float y             = *(float *) &node[0x05-offset];
-  const float z             = *(float *) &node[0x06-offset];
+  const float x             = Util::Uint32AsFloat(node[0x04-offset]);
+  const float y             = Util::Uint32AsFloat(node[0x05-offset]);
+  const float z             = Util::Uint32AsFloat(node[0x06-offset]);
   
   // Texture offset?
   TextureOffset oldTextureOffset = m_textureOffset; // save old offsets
@@ -819,7 +802,7 @@ void CLegacy3D::DescendNodePtr(UINT32 nodeAddr)
 // Draws viewports of the given priority
 void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
 {
-  static const GLfloat color[8][3] = {
+  static constexpr GLfloat color[8][3] = {
     { 0.0, 0.0, 0.0 },    // off
     { 0.0, 0.0, 1.0 },    // blue
     { 0.0, 1.0, 0.0 },    // green
@@ -832,7 +815,7 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
 
   // Translate address and obtain pointer
   const UINT32 *vpnode = TranslateCullingAddress(addr);
-  if (NULL == vpnode)
+  if (nullptr == vpnode)
     return;
 
   // Recursively process next viewport
@@ -859,9 +842,9 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
   int vpHeight  = (vpnode[0x14]>>18)&0x3FFF;  // height (14.2)
   
   // Field of view and clipping
-  GLfloat vpTopAngle  = (float) asin(*(float *)&vpnode[0x0E]);  // FOV Y upper half-angle (radians)
-  GLfloat vpBotAngle  = (float) asin(*(float *)&vpnode[0x12]);  // FOV Y lower half-angle
-  GLfloat fovYDegrees = (vpTopAngle+vpBotAngle)*(float)(180.0/3.14159265358979323846);
+  GLfloat vpTopAngle  = asinf(Util::Uint32AsFloat(vpnode[0x0E]));  // FOV Y upper half-angle (radians)
+  GLfloat vpBotAngle  = asinf(Util::Uint32AsFloat(vpnode[0x12]));  // FOV Y lower half-angle
+  GLfloat fovYDegrees = (vpTopAngle+vpBotAngle)*(float)(180.0/M_PI);
   // TO-DO: investigate clipping planes
   
   // Set up viewport and projection (TO-DO: near and far clipping)
@@ -883,15 +866,15 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
     viewportY      = yOffs + (GLint) ((float)(384-(vpY+vpHeight))*yRatio);
     viewportWidth  = (GLint) ((float)vpWidth*xRatio);
     viewportHeight = (GLint) ((float)vpHeight*yRatio);
-    gluPerspective(fovYDegrees,(GLfloat)vpWidth/(GLfloat)vpHeight,0.1f,1e5);        // use Model 3 viewport ratio
+    gluPerspective(fovYDegrees,(GLdouble)vpWidth/(GLdouble)vpHeight,0.1,1e5);        // use Model 3 viewport ratio
   }
   
   // Lighting (note that sun vector points toward sun -- away from vertex)
-  lightingParams[0] = *(float *) &vpnode[0x05];             // sun X
-  lightingParams[1] = *(float *) &vpnode[0x06];             // sun Y
-  lightingParams[2] = *(float *) &vpnode[0x04];             // sun Z
-  lightingParams[3] = *(float *) &vpnode[0x07];             // sun intensity
-  lightingParams[4] = (float) ((vpnode[0x24]>>8)&0xFF) * (1.0f/255.0f); // ambient intensity
+  lightingParams[0] = Util::Uint32AsFloat(vpnode[0x05]);             // sun X
+  lightingParams[1] = Util::Uint32AsFloat(vpnode[0x06]);             // sun Y
+  lightingParams[2] = Util::Uint32AsFloat(vpnode[0x04]);             // sun Z
+  lightingParams[3] = Util::Uint32AsFloat(vpnode[0x07]);             // sun intensity
+  lightingParams[4] = (float) ((vpnode[0x24]>>8)&0xFF) * (float)(1.0/255.0); // ambient intensity
   lightingParams[5] = 0.0;  // reserved
      
   // Spotlight
@@ -900,8 +883,8 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
   spotEllipse[1]    = (float) ((vpnode[0x1D]>>3)&0x1FFF);   // spotlight Y
   spotEllipse[2]    = (float) ((vpnode[0x1E]>>16)&0xFFFF);  // spotlight X size (16-bit? May have fractional component below bit 16)
   spotEllipse[3]    = (float) ((vpnode[0x1D]>>16)&0xFFFF);  // spotlight Y size
-  spotRange[0]      = 1.0f/(*(float *) &vpnode[0x21]);      // spotlight start
-  spotRange[1]      = *(float *) &vpnode[0x1F];             // spotlight extent
+  spotRange[0]      = 1.0f/Util::Uint32AsFloat(vpnode[0x21]); // spotlight start
+  spotRange[1]      = Util::Uint32AsFloat(vpnode[0x1F]);    // spotlight extent
   spotColor[0]      = color[spotColorIdx][0];               // spotlight color
   spotColor[1]      = color[spotColorIdx][1];
   spotColor[2]      = color[spotColorIdx][2];
@@ -920,56 +903,56 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
   spotEllipse[3] *= yRatio;
 
   // Fog
-  fogParams[0] = (float) ((vpnode[0x22]>>16)&0xFF) * (1.0f/255.0f); // fog color R
-  fogParams[1] = (float) ((vpnode[0x22]>>8)&0xFF) * (1.0f/255.0f);  // fog color G
-  fogParams[2] = (float) ((vpnode[0x22]>>0)&0xFF) * (1.0f/255.0f);  // fog color B
-  fogParams[3] = *(float *) &vpnode[0x23];                          // fog density
-  fogParams[4] = (float) (INT16) (vpnode[0x25]&0xFFFF)*(1.0f/255.0f); // fog start
-  if (ISINF(fogParams[3]) || ISNAN(fogParams[3]) || ISINF(fogParams[4]) || ISNAN(fogParams[4])) // Star Wars Trilogy
+  fogParams[0] = (float) ((vpnode[0x22]>>16)&0xFF) * (float)(1.0/255.0); // fog color R
+  fogParams[1] = (float) ((vpnode[0x22]>>8)&0xFF) * (float)(1.0/255.0);  // fog color G
+  fogParams[2] = (float) ((vpnode[0x22]>>0)&0xFF) * (float)(1.0/255.0);  // fog color B
+  fogParams[3] = Util::Uint32AsFloat(vpnode[0x23]);                      // fog density
+  fogParams[4] = (float) (INT16) (vpnode[0x25]&0xFFFF) * (float)(1.0/255.0); // fog start
+  if (std::isinf(fogParams[3]) || std::isnan(fogParams[3]) || std::isinf(fogParams[4]) || std::isnan(fogParams[4])) // Star Wars Trilogy
     fogParams[3] = fogParams[4] = 0.0f;
-  
+
   // Unknown light/fog parameters
-  //GLfloat scrollFog = (float) (vpnode[0x20]&0xFF) * (1.0f/255.0f);  // scroll fog
-  //GLfloat scrollAtt = (float) (vpnode[0x24]&0xFF) * (1.0f/255.0f);  // scroll attenuation
+  //GLfloat scrollFog = (float) (vpnode[0x20]&0xFF) * (float)(1.0/255.0);  // scroll fog
+  //GLfloat scrollAtt = (float) (vpnode[0x24]&0xFF) * (float)(1.0/255.0);  // scroll attenuation
   //printf("scrollFog = %g, scrollAtt = %g\n", scrollFog, scrollAtt);
   //printf("Fog: R=%02X G=%02X B=%02X density=%g (%X) %d start=%g\n", ((vpnode[0x22]>>16)&0xFF), ((vpnode[0x22]>>8)&0xFF), ((vpnode[0x22]>>0)&0xFF), fogParams[3], vpnode[0x23], (fogParams[3]==fogParams[3]), fogParams[4]);
-  
+
   // Clear texture offsets before proceeding
   m_textureOffset = TextureOffset();
-  
+
   // Set up coordinate system and base matrix
   UINT32 matrixBase = vpnode[0x16] & 0xFFFFFF;
   glMatrixMode(GL_MODELVIEW);
   InitMatrixStack(matrixBase);
-  
+
   // Safeguard: weird coordinate system matrices usually indicate scenes that will choke the renderer
-  if (NULL != matrixBasePtr)
+  if (nullptr != matrixBasePtr)
   {
     float m21, m32, m13;
-    
+
     // Get the three elements that are usually set and see if their magnitudes are 1
     m21 = matrixBasePtr[6];
     m32 = matrixBasePtr[10];
     m13 = matrixBasePtr[5];
-    
+
     m21 *= m21;
     m32 *= m32;
     m13 *= m13;
 
-    if ((m21>1.05) || (m21<0.95))
+    if ((m21>1.05f) || (m21<0.95f))
       return;
-    if ((m32>1.05) || (m32<0.95))
+    if ((m32>1.05f) || (m32<0.95f))
       return;
-    if ((m13>1.05) || (m13<0.95))
+    if ((m13>1.05f) || (m13<0.95f))
       return;
   }
-  
+
   // Render
   AppendDisplayList(&VROMCache, true, 0); // add a viewport display list node
   AppendDisplayList(&PolyCache, true, 0);
   stackDepth = 0;
   listDepth = 0;
-  
+
   // Descend down the node link: Use recursive traversal
   DescendNodePtr(nodeAddr);
 }
@@ -980,6 +963,10 @@ void CLegacy3D::RenderFrame(void)
 
   // Begin frame
   ClearErrors();  // must be cleared each frame
+
+  if (m_aaTarget) {
+      glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);			// if we have an AA target draw to it instead of the default back buffer
+  }
   
   // Z buffering (Z buffer is cleared by display list viewport nodes)
   glDepthFunc(GL_LESS);
@@ -1056,6 +1043,10 @@ void CLegacy3D::RenderFrame(void)
   glDisableClientState(GL_TEXTURE_COORD_ARRAY);
   glDisableClientState(GL_NORMAL_ARRAY);
   glDisableClientState(GL_VERTEX_ARRAY);
+
+  if (m_aaTarget) {
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);			// restore target if needed
+  }
 }
 
 void CLegacy3D::EndFrame(void)
@@ -1106,7 +1097,7 @@ void CLegacy3D::SetStepping(int stepping)
   DebugLog("Legacy3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
   
-bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam)
+bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
   // Allocate memory for texture buffer
   textureBuffer = new(std::nothrow) GLfloat[1024*1024*4];
@@ -1114,6 +1105,8 @@ bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
     return ErrorLog("Insufficient memory for texture decode buffer.");
     
   glGetError(); // clear error flag
+
+  m_aaTarget = aaTarget;
   
   // Create model caches and VBOs
   if (CreateModelCache(&VROMCache, NUM_STATIC_VERTS, NUM_LOCAL_VERTS, NUM_STATIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, false))
@@ -1327,7 +1320,8 @@ float CLegacy3D::GetLosValue(int layer)
 }
 
 CLegacy3D::CLegacy3D(const Util::Config::Node &config)
-  : m_config(config)
+  : m_config(config),
+    m_aaTarget(0)
 { 
   cullingRAMLo = NULL;
   cullingRAMHi = NULL;

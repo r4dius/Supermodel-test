@@ -35,7 +35,7 @@
 #include "Game.h"
 #include <stdarg.h>
 #include <vector>
-#include <strings.h>
+#include <string>
 #include <iostream>
 using namespace std;
 

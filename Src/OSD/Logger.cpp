@@ -24,6 +24,8 @@
 #include <set>
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <syslog.h>
 #endif
 
 
@@ -166,7 +168,10 @@ void CMultiLogger::DebugLog(const char *fmt, va_list vl)
 {
   for (auto &logger: m_loggers)
   {
-    logger->DebugLog(fmt, vl);
+    va_list vl_tmp;
+    va_copy(vl_tmp, vl);
+    logger->DebugLog(fmt, vl_tmp);
+    va_end(vl_tmp);
   }
 }
 
@@ -174,7 +179,10 @@ void CMultiLogger::InfoLog(const char *fmt, va_list vl)
 {
   for (auto &logger: m_loggers)
   {
-    logger->InfoLog(fmt, vl);
+    va_list vl_tmp;
+    va_copy(vl_tmp, vl);
+    logger->InfoLog(fmt, vl_tmp);
+    va_end(vl_tmp);
   }
 }
 
@@ -182,7 +190,10 @@ void CMultiLogger::ErrorLog(const char *fmt, va_list vl)
 {
   for (auto &logger: m_loggers)
   {
-    logger->ErrorLog(fmt, vl);
+    va_list vl_tmp;
+    va_copy(vl_tmp, vl);
+    logger->ErrorLog(fmt, vl_tmp);
+    va_end(vl_tmp);
   }
 }
 
@@ -342,7 +353,7 @@ void CSystemLogger::DebugLog(const char *fmt, va_list vl)
 #ifdef _WIN32
   OutputDebugString(string2);
 #else
-  //syslog(LOG_DEBUG, string2);
+  syslog(LOG_DEBUG, string2);
 #endif
 }
 
@@ -362,7 +373,7 @@ void CSystemLogger::InfoLog(const char *fmt, va_list vl)
 #ifdef _WIN32
   OutputDebugString(string2);
 #else
-  //syslog(LOG_INFO, string2);
+  syslog(LOG_INFO, string2);
 #endif
 }
 
@@ -382,7 +393,7 @@ void CSystemLogger::ErrorLog(const char *fmt, va_list vl)
  #ifdef _WIN32
   OutputDebugString(string2);
 #else
-  //syslog(LOG_ERR, string2);
+  syslog(LOG_ERR, string2);
 #endif
 }
 

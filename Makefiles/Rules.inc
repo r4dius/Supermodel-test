@@ -68,7 +68,7 @@ endif
 #
 # Compiler options
 #
-ARCH = -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
+ARCH =
 OPT = -O3
 WARN = -Wall
 CSTD = -std=iso9899:2011
@@ -78,10 +78,8 @@ CXXSTD = -std=c++17
 #
 # Construct the compiler (C and C++) and linker flags
 #
-COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I/opt/devkitpro/portlibs/switch/include -I,$(sort $(INCLUDE_DIRS))) -DGL_GLEXT_PROTOTYPES -DGLEW_NO_GLU $(SUPERMODEL_BUILD_FLAGS)
-CCOMMON_CFLAGS = -c $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -GL_GLEXT_PROTOTYPES -DGLEW_NO_GLU $(SUPERMODEL_BUILD_FLAGS)
+COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC $(SUPERMODEL_BUILD_FLAGS)
 CFLAGS = $(COMMON_CFLAGS) $(CSTD)
-CCFLAGS = $(CCOMMON_CFLAGS) $(CSTD)
 CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
 LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) -s
 
@@ -99,12 +97,27 @@ SRC_FILES = \
 	Src/Util/BitRegister.cpp \
 	Src/JTAG.cpp \
 	Src/Graphics/Legacy3D/Error.cpp \
+	Src/Pkgs/glew.cpp \
 	Src/Graphics/Shader.cpp \
 	Src/Model3/Real3D.cpp \
 	Src/Graphics/Legacy3D/Legacy3D.cpp \
 	Src/Graphics/Legacy3D/Models.cpp \
 	Src/Graphics/Legacy3D/TextureRefs.cpp \
+	Src/Graphics/New3D/GLSLShader.cpp \
+	Src/Graphics/New3D/R3DFrameBuffers.cpp \
+	Src/Graphics/New3D/New3D.cpp \
+	Src/Graphics/New3D/Mat4.cpp \
+	Src/Graphics/New3D/Model.cpp \
+	Src/Graphics/New3D/PolyHeader.cpp \
+	Src/Graphics/New3D/VBO.cpp \
+	Src/Graphics/New3D/Vec.cpp \
+	Src/Graphics/New3D/R3DShader.cpp \
+	Src/Graphics/New3D/R3DFloat.cpp \
+	Src/Graphics/New3D/R3DScrollFog.cpp \
+	Src/Graphics/New3D/TextureBank.cpp \
+	Src/Graphics/FBO.cpp \
 	Src/Graphics/Render2D.cpp \
+	Src/Graphics/SuperAA.cpp \
 	Src/Model3/TileGen.cpp \
 	Src/Model3/Model3.cpp \
 	Src/CPU/PowerPC/ppc.cpp \
@@ -139,6 +152,7 @@ SRC_FILES = \
 	Src/Inputs/InputTypes.cpp \
 	Src/Inputs/MultiInputSource.cpp \
 	Src/OSD/SDL/SDLInputSystem.cpp \
+	Src/OSD/SDL/Crosshair.cpp \
 	Src/OSD/Outputs.cpp \
 	Src/Sound/MPEG/MpegAudio.cpp \
 	Src/Model3/Crypto.cpp \
@@ -226,7 +240,7 @@ version: set_version
 
 $(BIN_DIR)/$(OUTFILE):	$(BIN_DIR) $(OBJ_DIR) $(OBJ_FILES)
 	$(info --------------------------------------------------------------------------------)
-	$(info Linking Supermodel     : $(BIN_DIR)/$(OUTFILE)) - $(LD) $(OBJ_FILES) $(LDFLAGS)
+	$(info Linking Supermodel     : $(BIN_DIR)/$(OUTFILE))
 	$(SILENT)$(LD) $(OBJ_FILES) $(LDFLAGS)
 	$(info --------------------------------------------------------------------------------)
 
@@ -289,27 +303,31 @@ MUSASHI_LDFLAGS = -o $(MUSASHI_OUTFILE) $(OBJ_DIR)/m68kmake.o -s
 
 $(MUSASHI_OUTFILE): Src/CPU/68K/Musashi/m68kmake.c Src/CPU/68K/Musashi/m68k_in.c
 	$(info --------------------------------------------------------------------------------)
+	$(info Compiling              : $< -> $(OBJ_DIR)/m68kmake.o)
+	$(SILENT)$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/m68kmake.o
+	$(info Linking                : $(MUSASHI_OUTFILE))
+	$(SILENT)$(LD) $(MUSASHI_LDFLAGS)
 
 $(OBJ_DIR)/m68kops.h $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kopnz.c:	$(MUSASHI_OUTFILE) Src/CPU/68K/Musashi/m68k_in.c Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
 	$(info Generating 68K emulator: $@)
 	@$(MUSASHI_OUTFILE) $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
 
 $(OBJ_DIR)/m68kcpu.o:	Src/CPU/68K/Musashi/m68kcpu.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
-	$(info Compiling              : $< -> $@ - $(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $(OBJ_DIR)/m68kcpu.o)
+	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $(OBJ_DIR)/m68kcpu.o
 
 $(OBJ_DIR)/m68kops.o:	$(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
-	$(info Compiling              : $< -> $@ - $(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@)
+	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
 $(OBJ_DIR)/m68kopac.o: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
-	$(info Compiling              : $< -> $@ - $(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@)
+	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
 $(OBJ_DIR)/m68kopdm.o: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
-	$(info Compiling              : $< -> $@ - $(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@)
+	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
 $(OBJ_DIR)/m68kopnz.o: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
-	$(info Compiling              : $< -> $@ - $(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@)
+	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
