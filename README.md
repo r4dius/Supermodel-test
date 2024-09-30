@@ -20,6 +20,14 @@ Windows builds are updated automatically and available on the official Supermode
 
 ## Build Instructions
 
+### Switch
+
+```
+pacman -S switch-glad switch-glfw switch-sdl2 switch-sdl2_net
+make -f Makefiles/Makefile.SVITCH
+./linkle.exe nro bin/supermodel bin/supermodel.nro
+```
+
 ### Windows
 
 The preferred method for building Supermodel is to use GCC and MSYS2. After installing [MSYS2](https://msys2.org), open the MSYS2 shell and install the required dependencies using the pacman package manager:
